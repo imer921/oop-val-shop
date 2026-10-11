@@ -1,1 +1,4 @@
-*.class'nbin/'nout/'n.vscode/
+*.class
+bin/
+out/
+.vscode/
