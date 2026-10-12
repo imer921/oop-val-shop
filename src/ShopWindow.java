@@ -26,7 +26,6 @@ public class ShopWindow extends JFrame {
 
     private enum Slot { SIDEARM, PRIMARY, ARMOR }
 
-    // Each inner array is one screen column; the sections inside stack vertically.
     private static final String[][] COLUMNS = {
         {"Sidearm"}, {"SMGs", "Shotguns"}, {"Rifles"}, {"Sniper", "Heavy"}, {"Armor"}
     };
@@ -36,6 +35,8 @@ public class ShopWindow extends JFrame {
     private final JLabel loadoutLabel = new JLabel();
     private final List<WeaponCard> cards = new ArrayList<>();
     private final Map<String, BufferedImage> imageCache = new HashMap<>();
+    private static final double MAX_SCALE = 1.0; // 1.0 = never enlarge past the PNG's real size
+    private final Map<String, BufferedImage> scaledCache = new HashMap<>();
     private final DetailPanel detail = new DetailPanel();
 
     public ShopWindow(Player player) {
@@ -59,7 +60,6 @@ public class ShopWindow extends JFrame {
         setVisible(true);
     }
 
-    // ---------- Layout ----------
 
     private JPanel buildPlayerPanel() {
         JPanel panel = new JPanel();
@@ -151,7 +151,6 @@ public class ShopWindow extends JFrame {
         return hint;
     }
 
-    // ---------- Shop data (edit prices here) ----------
 
     private Map<String, List<Weapon>> createCatalog() {
         Map<String, List<Weapon>> c = new LinkedHashMap<>();
@@ -192,7 +191,6 @@ public class ShopWindow extends JFrame {
                .add(new Weapon(name, price, category));
     }
 
-    // ---------- Rules ----------
 
     private static Slot slotOf(Weapon weapon) {
         String category = weapon.getCategory();
@@ -231,7 +229,7 @@ public class ShopWindow extends JFrame {
         }
         if (!player.buyWeapon(weapon)) {
             if (replaced != null) {
-                player.buyWeapon(replaced); // undo the sale
+                player.buyWeapon(replaced);
             }
             JOptionPane.showMessageDialog(this,
                     "Not enough credits for " + weapon.getName() + ".",
@@ -241,7 +239,6 @@ public class ShopWindow extends JFrame {
         refresh();
     }
 
-    // ---------- Display helpers ----------
 
     private void refresh() {
         creditsLabel.setText("\u00A4 " + String.format("%,d", player.getCredits()));
@@ -265,22 +262,84 @@ public class ShopWindow extends JFrame {
         String key = weapon.getName().toLowerCase().replace(' ', '_');
         if (!imageCache.containsKey(key)) {
             BufferedImage image = null;
-            try {
-                File file = new File("images/" + key + ".png");
-                if (file.exists()) image = ImageIO.read(file);
-            } catch (Exception ignored) {
-                // no image: the card just shows text
+            String[] folders = {
+                "images/",
+                "oop-val/images/",
+                "Java Projects/oop-val/images/"
+            };
+            for (String folder : folders) {
+                File file = new File(folder + key + ".png");
+                if (file.exists()) {
+                    try {
+                        image = trim(ImageIO.read(file));
+                    } catch (Exception ignored) {
+                        // unreadable file: fall back to text
+                    }
+                    break;
+                }
             }
             imageCache.put(key, image);
         }
         return imageCache.get(key);
     }
 
-    private static void drawScaled(Graphics2D g2, BufferedImage image, int x, int y, int maxW, int maxH) {
-        double scale = Math.min((double) maxW / image.getWidth(), (double) maxH / image.getHeight());
+    private void drawScaled(Graphics2D g2, BufferedImage image, int x, int y, int maxW, int maxH) {
+        double scale = Math.min(MAX_SCALE,
+                Math.min((double) maxW / image.getWidth(), (double) maxH / image.getHeight()));
         int w = Math.max(1, (int) (image.getWidth() * scale));
         int h = Math.max(1, (int) (image.getHeight() * scale));
-        g2.drawImage(image, x + (maxW - w) / 2, y + (maxH - h) / 2, w, h, null);
+
+        BufferedImage drawn = (scale < 1.0) ? scaled(image, w, h) : image;
+        g2.drawImage(drawn, x + (maxW - w) / 2, y + (maxH - h) / 2, w, h, null);
+    }
+
+    private static BufferedImage trim(BufferedImage src) {
+        if (!src.getColorModel().hasAlpha()) return src;
+
+        int minX = src.getWidth(), minY = src.getHeight(), maxX = -1, maxY = -1;
+        for (int y = 0; y < src.getHeight(); y++) {
+            for (int x = 0; x < src.getWidth(); x++) {
+                int alpha = (src.getRGB(x, y) >>> 24) & 0xFF;
+                if (alpha > 20) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        if (maxX < 0) return src; // fully transparent, leave it alone
+        return src.getSubimage(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    private BufferedImage scaled(BufferedImage src, int targetW, int targetH) {
+        String key = System.identityHashCode(src) + "@" + targetW + "x" + targetH;
+        BufferedImage cached = scaledCache.get(key);
+        if (cached != null) return cached;
+        if (scaledCache.size() > 300) scaledCache.clear();
+
+        BufferedImage current = src;
+        int w = src.getWidth();
+        int h = src.getHeight();
+        while (w > targetW * 2 || h > targetH * 2) {
+            w = Math.max(targetW, w / 2);
+            h = Math.max(targetH, h / 2);
+            current = resize(current, w, h);
+        }
+        current = resize(current, targetW, targetH);
+
+        scaledCache.put(key, current);
+        return current;
+    }
+
+    private static BufferedImage resize(BufferedImage src, int w, int h) {
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = out.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.drawImage(src, 0, 0, w, h, null);
+        g2.dispose();
+        return out;
     }
 
     private static void drawCentered(Graphics2D g2, String text, int centerX, int y) {
@@ -288,7 +347,7 @@ public class ShopWindow extends JFrame {
     }
 
     private static Font font(int style, int size) {
-        return new Font("Bahnschrift", style, size); // falls back automatically if missing
+        return new Font("Bahnschrift", style, size); 
     }
 
     private static void smooth(Graphics2D g2) {
@@ -297,7 +356,6 @@ public class ShopWindow extends JFrame {
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
     }
 
-    // ---------- Custom components ----------
 
     private static class Backdrop extends JPanel {
         @Override
@@ -348,7 +406,6 @@ public class ShopWindow extends JFrame {
             boolean owned = isOwned(weapon);
             boolean dimmed = !owned && !canAfford(weapon);
 
-            // background
             if (owned) {
                 g2.setColor(TEAL_FILL);
             } else if (hovered && !dimmed) {
@@ -364,7 +421,6 @@ public class ShopWindow extends JFrame {
                 g2.drawRect(1, 1, w - 3, h - 3);
             }
 
-            // optional picture
             BufferedImage image = imageFor(weapon);
             if (image != null) {
                 Composite old = g2.getComposite();
@@ -375,7 +431,6 @@ public class ShopWindow extends JFrame {
                 g2.setComposite(old);
             }
 
-            // price (or OWNED) above the name
             String top = owned ? "OWNED" : "\u00A4" + String.format("%,d", weapon.getPrice());
             g2.setFont(font(Font.PLAIN, 12));
             g2.setColor(dimmed ? MUTED : TEXT);
