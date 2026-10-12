@@ -28,5 +28,13 @@ public class Player {
             return false;
         }
 
+        public boolean sellWeapon(Weapon weapon) {
+            if (loadouts.remove(weapon)) {
+            credits += weapon.getPrice();
+            return true;
+        }
+            return false;
+        }
+
 
 }
