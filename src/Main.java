@@ -11,10 +11,22 @@ public class Main {
 
         Player player = new Player(800);
         System.out.println("\nPlayer's credits: " + player.getCredits());
-        player.buyWeapon(weapon2);
-        player.buyWeapon(weapon1);
-        System.out.println("\nPlayer's credits: " + player.getCredits());
-        System.out.println("Player's loadout:");
+
+        boolean bought = player.buyWeapon(weapon2);
+        if (bought) {
+            System.out.println("Weapon bought: " + weapon2.getName());
+        } else {
+            System.out.println("buy status for " + weapon2.getName() + ":  Not enough credits.");
+        }
+
+        bought = player.buyWeapon(weapon1);
+        if (bought) {
+            System.out.println("Weapon bought: " + weapon1.getName());
+        } else {
+            System.out.println("buy status for " + weapon1.getName() + ":  Not enough credits.");
+        }
+
+        System.out.println("\nPlayer's loadout: ");
         for (Weapon weapon : player.getLoadouts()) {
             System.out.println(weapon);
         }
