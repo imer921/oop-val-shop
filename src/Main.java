@@ -30,5 +30,7 @@ public class Main {
         for (Weapon weapon : player.getLoadouts()) {
             System.out.println(weapon);
         }
+
+        new ShopWindow();
     }
 }
