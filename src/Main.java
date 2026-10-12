@@ -8,5 +8,15 @@ public class Main {
         System.out.println(weapon1);
         System.out.println(weapon2);
         System.out.println(weapon3);
+
+        Player player = new Player(800);
+        System.out.println("\nPlayer's credits: " + player.getCredits());
+        player.buyWeapon(weapon2);
+        player.buyWeapon(weapon1);
+        System.out.println("\nPlayer's credits: " + player.getCredits());
+        System.out.println("Player's loadout:");
+        for (Weapon weapon : player.getLoadouts()) {
+            System.out.println(weapon);
+        }
     }
 }

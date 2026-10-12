@@ -1,7 +1,7 @@
 public class Weapon {
-    private String name;
-    private int price;
-    private String category;
+    private final String name;
+    private final int price;
+    private final String category;
 
     public Weapon(String name, int price, String category) {
         this.name = name;
@@ -24,6 +24,6 @@ public class Weapon {
 
     @Override
     public String toString() {
-        return name + " - " + price + " - " + "(" + category + ")";
+        return name + " - " + price + "(" + category + ")";
     }
 }
