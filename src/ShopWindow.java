@@ -43,7 +43,7 @@ public class ShopWindow extends JFrame {
         this.player = player;
 
         setTitle("VALORANT - Buy Phase");
-        setSize(1300, 780);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
