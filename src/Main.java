@@ -12,6 +12,8 @@ public class Main {
         Player player = new Player(800);
         System.out.println("\nPlayer's credits: " + player.getCredits());
 
+        /* 
+        
         boolean bought = player.buyWeapon(weapon2);
         if (bought) {
             System.out.println("Weapon bought: " + weapon2.getName());
@@ -31,6 +33,8 @@ public class Main {
             System.out.println(weapon);
         }
 
-        new ShopWindow();
+        */
+
+        new ShopWindow(player);
     }
 }
